@@ -1,0 +1,9 @@
+[workspace]
+members = [
+    "common",
+    "server",
+    "client",
+]
+
+# Good practice to set this for modern dependency resolution
+resolver = "2"

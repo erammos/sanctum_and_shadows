@@ -1,0 +1,94 @@
+{
+  "sanc-003": {
+    "id": "sanc-003",
+    "title": "Forbidden Grimoire",
+    "faction": "Sanctum",
+    "text": "When you Attune this, place 1 \"power\" counter on it. Spend counter to Activate a Ward for free.",
+    "image_file": "assets/cards/sanc-003.png",
+    "data": {
+      "AncientArtifact": {
+        "vp": 3,
+        "attunement": 5
+      }
+    }
+  },
+  "sanc-004": {
+    "id": "sanc-004",
+    "title": "Glyph of Repellance",
+    "faction": "Sanctum",
+    "text": "↳ End the Infiltration.",
+    "image_file": "assets/cards/sanc-004.png",
+    "data": {
+      "Ward": {
+        "subtype": "Glyph",
+        "cost": 2,
+        "strength": 1
+      }
+    }
+  },
+  "sanc-009": {
+    "id": "sanc-009",
+    "title": "Cursed Idol",
+    "faction": "Sanctum",
+    "text": "If Thief accesses, you may pay X 💧 to deal 2X Magical Backlash (Max 5X).",
+    "image_file": "assets/cards/sanc-009.png",
+    "data": {
+      "Asset": {
+        "subtype": "Ambush",
+        "cost": 0
+      }
+    }
+  },
+  "sanc-010": {
+    "id": "sanc-010",
+    "title": "Grand Offering",
+    "faction": "Sanctum",
+    "text": "Gain 9 💧.",
+    "image_file": "assets/cards/sanc-010.png",
+    "data": {
+      "Operation": {
+        "subtype": "Ritual",
+        "cost": 5
+      }
+    }
+  },
+  "thief-001": {
+    "id": "thief-001",
+    "title": "Dispel Glyph",
+    "faction": "Thief",
+    "text": "1 💧: +1 Strength.\n1 💧: Break 1 Glyph subroutine.",
+    "image_file": "assets/cards/thief-001.png",
+    "data": {
+      "CounterSpell": {
+        "subtype": "Fracter",
+        "cost": 2,
+        "strength": 1,
+        "focus_cost": 1
+      }
+    }
+  },
+  "thief-007": {
+    "id": "thief-007",
+    "title": "Adventurer's Purse",
+    "faction": "Thief",
+    "text": "Gain 6 💧.",
+    "image_file": "assets/cards/thief-007.png",
+    "data": {
+      "Event": {
+        "cost": 0
+      }
+    }
+  },
+  "thief-008": {
+    "id": "thief-008",
+    "title": "Hasty Scrying",
+    "faction": "Thief",
+    "text": "Draw 3 cards.",
+    "image_file": "assets/cards/thief-008.png",
+    "data": {
+      "Event": {
+        "cost": 1
+      }
+    }
+  }
+}
