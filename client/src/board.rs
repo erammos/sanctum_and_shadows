@@ -9,9 +9,9 @@ pub struct DragInfo {
     from_target_id: Option<u32>,
     drag_offset: Vec3,
 }
-pub struct Board<'texture> {
+pub struct Board<'board> {
     pub targets: Vec<DropTarget>,
-    cards: Vec<CardView<'texture>>,
+    cards: Vec<CardView<'board>>,
     current_drag: Option<DragInfo>,
 }
 pub enum TargetType {
@@ -33,7 +33,7 @@ impl DropTarget {
         draw_plane(self.anchor, self.size, None, GREEN);
     }
 }
-impl<'texture> Board<'texture> {
+impl<'board> Board<'board> {
     pub fn new(targets: Vec<DropTarget>) -> Self {
         Self {
             cards: vec![],
@@ -41,31 +41,49 @@ impl<'texture> Board<'texture> {
             current_drag: None,
         }
     }
-    pub fn add_card_to_target(&mut self, mut card: CardView<'texture>, target_id: u32) {
-        card.attached_to_target = Some(target_id);
+    pub fn add_card_to_target(&mut self, mut card: CardView<'board>, target_id: u32) {
+        card.attached_to_target = Some(&self.targets[target_id as usize]);
         self.cards.push(card);
+        let target = &self.targets[target_id as usize];
+        match target.target_type {
+            TargetType::BoardH => {
+
+            },
+            TargetType::Hand => {
+                let mut next_pos = target.anchor;
+                let distance = 1.0;
+                let offset = (self.cards.len() as f32 * distance) / 2.0;
+                for (i,card) in &mut self.cards.iter_mut().enumerate()
+                {
+                    card.position = vec3(next_pos.x - offset - card.size.x / 2.0,next_pos.y,next_pos.z);
+                    next_pos = vec3(next_pos.x + distance,next_pos.y,next_pos.z);
+                }
+
+            },
+            TargetType::Event => {}
+            TargetType::BoardV => {}
+            TargetType::Trash => {}
+        };
     }
     pub fn update(&mut self, mouse_world: Vec3) {
-        if is_mouse_button_pressed(MouseButton::Left) {
-            if (self.current_drag.is_none()) {
-                for (i, card) in self.cards.iter_mut().enumerate() {
-                    if card.intersects(mouse_world) {
-                        card.is_grabbed = true;
-                        match card.card_state {
-                            common::card::CardState::Revealed(instance_id, _) => {
-                                self.current_drag = Some(DragInfo {
-                                    selected_card: i as u32,
-                                    from_position: card.position,
-                                    drag_offset: mouse_world - card.position,
-                                    from_target_id: None,
-                                });
-                            }
-                            common::card::CardState::Hidden(_) => {
-                                self.current_drag = None;
-                            }
-                        };
-                        break;
-                    }
+        if is_mouse_button_pressed(MouseButton::Left) && (self.current_drag.is_none()) {
+            for (i, card) in self.cards.iter_mut().enumerate() {
+                if card.intersects(mouse_world) {
+                    card.is_grabbed = true;
+                    match card.card_state {
+                        common::card::CardState::Revealed(instance_id, _) => {
+                            self.current_drag = Some(DragInfo {
+                                selected_card: i as u32,
+                                from_position: card.position,
+                                drag_offset: mouse_world - card.position,
+                                from_target_id: None,
+                            });
+                        }
+                        common::card::CardState::Hidden(_) => {
+                            self.current_drag = None;
+                        }
+                    };
+                    break;
                 }
             }
         }

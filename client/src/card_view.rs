@@ -9,7 +9,7 @@ pub struct CardView<'texture> {
     pub position: Vec3,
     pub size: Vec2,
     pub is_grabbed: bool,
-    pub attached_to_target: Option<u32>,
+    pub attached_to_target: Option<*  const DropTarget>,
 }
 
 impl<'texture> CardView<'texture> {

@@ -142,19 +142,19 @@ async fn main() {
         DropTarget {
             id: 0,
             anchor: vec3(0.0, 0.0, -2.0),
-            size: vec2(1.0, 1.0),
-            target_type: board::TargetType::BoardH,
+            size: vec2(10.0, 0.5),
+            target_type: board::TargetType::Hand,
         },
         DropTarget {
             id: 1,
-            anchor: vec3(0.0, 0.0, 3.0),
-            size: vec2(2.0, 1.0),
+            anchor: vec3(0.0, 0.0, 0.0),
+            size: vec2(10.0, 1.0),
             target_type: board::TargetType::Hand,
         },
     ]);
 
-    board.add_card_to_target(card, 0);
-    board.add_card_to_target(card1, 1);
+    board.add_card_to_target(card, 1);
+   board.add_card_to_target(card1, 1);
     loop {
         if is_mouse_button_pressed(MouseButton::Left) {
             let msg = ActionReq::DrawCard;
