@@ -18,7 +18,7 @@ impl<'texture> CardView<'texture> {
             card_state,
             texture,
             position: vec3(0.0, 0.0, 0.0),
-            size: vec2(10.0 / 16.0, 16.0 / 16.0),
+            size: vec2((10.0 / 16.0 ) * 0.5, 1.0 * 0.5),
             is_grabbed: false,
             attached_to_target: None,
         }

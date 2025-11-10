@@ -41,9 +41,10 @@ impl<'board> Board<'board> {
             current_drag: None,
         }
     }
-    pub fn add_card_to_target(&mut self, mut card: CardView<'board>, target_id: u32) {
-        card.attached_to_target = Some(&self.targets[target_id as usize]);
-        self.cards.push(card);
+    pub fn update_layout(&mut self,target_id:u32)
+    {
+        let distance = self.cards[0].size.x * 2.0 + 0.02;
+
         let target = &self.targets[target_id as usize];
         match target.target_type {
             TargetType::BoardH => {
@@ -51,11 +52,10 @@ impl<'board> Board<'board> {
             },
             TargetType::Hand => {
                 let mut next_pos = target.anchor;
-                let distance = 1.0;
-                let offset = (self.cards.len() as f32 * distance) / 2.0;
-                for (i,card) in &mut self.cards.iter_mut().enumerate()
+                let offset = ((self.cards.len() - 1) as f32 * distance) / 2.0;
+                for (i,card) in &mut self.cards.iter_mut().filter(|c| c.attached_to_target == Some(target_id)).enumerate()
                 {
-                    card.position = vec3(next_pos.x - offset - card.size.x / 2.0,next_pos.y,next_pos.z);
+                    card.position = vec3(next_pos.x - offset,next_pos.y,next_pos.z);
                     next_pos = vec3(next_pos.x + distance,next_pos.y,next_pos.z);
                 }
 
@@ -64,6 +64,11 @@ impl<'board> Board<'board> {
             TargetType::BoardV => {}
             TargetType::Trash => {}
         };
+    }
+    pub fn add_card_to_target(&mut self, mut card: CardView<'board>, target_id: u32) {
+        card.attached_to_target = Some(target_id);
+        self.cards.push(card);
+        self.update_layout(target_id);
     }
     pub fn update(&mut self, mouse_world: Vec3) {
         if is_mouse_button_pressed(MouseButton::Left) && (self.current_drag.is_none()) {
@@ -76,7 +81,7 @@ impl<'board> Board<'board> {
                                 selected_card: i as u32,
                                 from_position: card.position,
                                 drag_offset: mouse_world - card.position,
-                                from_target_id: None,
+                                from_target_id: card.attached_to_target,
                             });
                         }
                         common::card::CardState::Hidden(_) => {
@@ -96,20 +101,16 @@ impl<'board> Board<'board> {
         if is_mouse_button_released(MouseButton::Left) {
             if let Some(drag) = &self.current_drag {
                 let card = &mut self.cards[drag.selected_card as usize];
-                let mut found_target = false;
-                for target in &self.targets {
+                let mut selected_target:Option<u32> = drag.from_target_id;
+                for (i,target)in self.targets.iter().enumerate() {
                     if card.intersects_area(&target) {
-                        match target.target_type {
-                            _ => card.position = target.anchor,
-                            TargetType::BoardH => {}
-                            TargetType::Hand => {}
-                        }
-                        found_target = true;
+                        selected_target = Some(i as u32);
                         break;
                     }
                 }
-                if (!found_target) {
-                    card.position = drag.from_position;
+                if let Some(target_id)  = selected_target{
+                    card.attached_to_target = Some(target_id);
+                    self.update_layout(target_id);
                 }
                 self.current_drag = None;
             }

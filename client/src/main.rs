@@ -86,8 +86,8 @@ fn window_conf() -> Conf {
     Conf {
         window_title: "Window Conf".to_owned(),
         fullscreen: false,
-        window_height: 1080 / 2,
-        window_width: 1920 / 2,
+        window_height: 1080,
+        window_width: 1920,
         ..Default::default()
     }
 }
@@ -147,8 +147,8 @@ async fn main() {
         },
         DropTarget {
             id: 1,
-            anchor: vec3(0.0, 0.0, 0.0),
-            size: vec2(10.0, 1.0),
+            anchor: vec3(0.0, 0.0, 1.5),
+            size: vec2(10.0, 0.5),
             target_type: board::TargetType::Hand,
         },
     ]);
