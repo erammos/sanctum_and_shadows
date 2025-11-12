@@ -19,7 +19,7 @@ impl Timer {
 pub struct DragInfo {
     selected_card: usize,
     from_position: Vec3,
-    from_target_id: Option<u32>,
+    from_target_id: Option<usize>,
     drag_offset: Vec3,
 }
 pub struct FocusInfo {
@@ -63,7 +63,7 @@ impl<'texture> Board<'texture> {
             focus_timer: Timer::now(),
         }
     }
-    pub fn update_layout(&mut self, target_id: u32) {
+    pub fn update_layout(&mut self, target_id: usize) {
         let distance = self.cards[0].size.x * 2.0 + 0.02;
 
         let target = &self.targets[target_id as usize];
@@ -87,7 +87,7 @@ impl<'texture> Board<'texture> {
             TargetType::Trash => {}
         };
     }
-    pub fn add_card_to_target(&mut self, mut card: CardView<'texture>, target_id: u32) {
+    pub fn add_card_to_target(&mut self, mut card: CardView<'texture>, target_id: usize) {
         card.attached_to_target = Some(target_id);
         self.cards.push(card);
         self.update_layout(target_id);
@@ -159,10 +159,10 @@ impl<'texture> Board<'texture> {
        else if is_mouse_button_released(MouseButton::Left) {
             if let Some(drag) = &self.current_drag {
                 let card = &mut self.cards[drag.selected_card as usize];
-                let mut selected_target: Option<u32> = drag.from_target_id;
+                let mut selected_target: Option<usize> = drag.from_target_id;
                 for (i, target) in self.targets.iter().enumerate() {
                     if card.intersects_area(&target) {
-                        selected_target = Some(i as u32);
+                        selected_target = Some(i);
                         break;
                     }
                 }
