@@ -88,6 +88,11 @@ pub struct SanctumStateResponse {
     pub discard_lair: Option<Vec<CardState>>,
     pub remotes: Option<Vec<RemoteRes>>,
 }
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub enum Response{
+
+}
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum PlayerStateResponse {
     Thief(ThieStateResponse),

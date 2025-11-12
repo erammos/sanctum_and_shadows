@@ -164,14 +164,13 @@ async fn main() {
 
         clear_background(BLACK);
 
-        set_default_camera();
         state = match receiver.try_receive() {
             Some(event) => match event {
                 node::StoredNodeEvent::Network(net_event) => match net_event {
                     node::StoredNetEvent::Message(endpoint, data) => {
-                        let p = bincode::deserialize(&data).unwrap();
-                        dbg!("{:?}", &p);
-                        Some(p)
+                        let state = bincode::deserialize(&data).unwrap();
+                        dbg!("{:?}", &state);
+                        Some(state)
                     }
                     _ => state,
                 },
@@ -180,6 +179,16 @@ async fn main() {
             None => state,
         };
 
+        // --- 3. DRAWING ---
+        //draw_texture(&texture, 0.0, 0.0, WHITE);
+
+        set_camera(&camera);
+
+        let mouse_world_pos = ndc_to_world(&inv_matrix, mouse_position_local());
+        board.update(mouse_world_pos);
+        board.draw();
+
+        set_default_camera();
         draw_text(
             &format!("{}", selected_fanction),
             10.0,
@@ -194,14 +203,6 @@ async fn main() {
             40.0,
             get_color(other_faction(selected_fanction), state.as_ref()),
         );
-        // --- 3. DRAWING ---
-        //draw_texture(&texture, 0.0, 0.0, WHITE);
-
-        set_camera(&camera);
-
-        let mouse_world_pos = ndc_to_world(&inv_matrix, mouse_position_local());
-        board.update(mouse_world_pos);
-        board.draw();
         if is_quit_requested() {
             net.handler.stop();
             break;
