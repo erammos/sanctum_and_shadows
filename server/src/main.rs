@@ -4,8 +4,8 @@ use std::fs;
 use common::card::{CardData, CardState, Faction, load_cards_from_json};
 use common::player::Player;
 use common::{
-    ActionReq, BasicStats, CardId, InitStateResponse, InstanceId, PlayerStateResponse, PlayerType,
-    SanctumStateResponse, ThieStateResponse,
+    ActionReq, BasicStats, CardId, CommonState, InitStateResponse, InstanceId, PlayerStateResponse,
+    PlayerType, Response, SanctumState, ThiefState,
 };
 use message_io::network::{Endpoint, NetEvent, Transport};
 use message_io::node::{self, NodeListener}; // <-- Using shared code!
@@ -97,21 +97,25 @@ fn create_sanctum_state_response(
     deck: &Vec<InstanceId>,
     hand: &Vec<InstanceId>,
 ) -> PlayerStateResponse {
-    PlayerStateResponse::Sanctum(SanctumStateResponse {
-        stats: BasicStats {
-            mana_pool: 5,
-            stamina: 5,
-            score: 0,
+    PlayerStateResponse::Sanctum {
+        common: CommonState {
+            stats: BasicStats {
+                mana_pool: 5,
+                stamina: 5,
+                score: 0,
+            },
+            deck: instances.create_card_states(&deck, visible),
+            hand: instances.create_card_states(&hand, visible),
+            discard: vec![],
+            score_area: vec![],
         },
-        deck: instances.create_card_states(&deck, visible),
-        hand: instances.create_card_states(&hand, visible),
-        discard: vec![],
-        score_area: vec![],
-        hand_lair: None,
-        deck_lair: None,
-        discard_lair: None,
-        remotes: None,
-    })
+        specific: SanctumState {
+            hand_lair: None,
+            deck_lair: None,
+            discard_lair: None,
+            remotes: None,
+        },
+    }
 }
 fn create_thief_state_response(
     visible: bool,
@@ -119,20 +123,24 @@ fn create_thief_state_response(
     deck: &Vec<InstanceId>,
     hand: &Vec<InstanceId>,
 ) -> PlayerStateResponse {
-    PlayerStateResponse::Thief(ThieStateResponse {
-        stats: BasicStats {
-            mana_pool: 5,
-            stamina: 5,
-            score: 0,
+    PlayerStateResponse::Thief {
+        common: CommonState {
+            stats: BasicStats {
+                mana_pool: 5,
+                stamina: 5,
+                score: 0,
+            },
+            deck: instances.create_card_states(&deck, visible),
+            hand: instances.create_card_states(&hand, visible),
+            discard: vec![],
+            score_area: vec![],
         },
-        deck: instances.create_card_states(&deck, visible),
-        hand: instances.create_card_states(&hand, visible),
-        discard: vec![],
-        score_area: vec![],
-        spell_slots: None,
-        gear_slots: None,
-        ally_slots: None,
-    })
+        specific: ThiefState {
+            spell_slots: None,
+            gear_slots: None,
+            ally_slots: None,
+        },
+    }
 }
 fn main() {
     let cards = load_cards_from_json("cards.json").unwrap();
@@ -208,10 +216,8 @@ fn main() {
                             turn: Faction::Sanctum,
                         },
                     };
-                    let bytes = bincode::serialize(&response).unwrap();
+                    let bytes = bincode::serialize(&Response::Initial(response)).unwrap();
                     node.network().send(endpoint, &bytes);
-                    dbg!("Player init with {} {}", d.faction, &d.id);
-                    dbg!("Send to Player {:?}", &response);
                 }
             }
         }

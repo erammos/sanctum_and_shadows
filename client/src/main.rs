@@ -1,5 +1,6 @@
 mod board;
 mod card_view;
+use common::Response;
 use common::card::CardState;
 use common::card::Faction;
 use common::{ActionReq, InitReq, InitStateResponse};
@@ -66,16 +67,11 @@ fn other_faction(my_faction: Faction) -> Faction {
     }
 }
 
-fn get_color(faction: Faction, state: Option<&InitStateResponse>) -> Color {
-    match state {
-        Some(state) => {
-            if state.turn == faction {
-                Color::from_rgba(0, 255, 0, 255)
-            } else {
-                Color::from_rgba(255, 0, 0, 255)
-            }
-        }
-        None => Color::from_rgba(255, 255, 255, 255),
+fn get_color(faction: Faction, turn: Faction) -> Color {
+    if turn == faction {
+        Color::from_rgba(0, 255, 0, 255)
+    } else {
+        Color::from_rgba(255, 0, 0, 255)
     }
 }
 fn is_my_turn(my_faction: Faction, state: &InitStateResponse) -> bool {
@@ -94,8 +90,8 @@ fn window_conf() -> Conf {
 #[macroquad::main(window_conf)]
 async fn main() {
     let args: Vec<String> = std::env::args().collect();
-
     let texture: Texture2D = load_texture("client/assets/sanc-003.png").await.unwrap();
+
     prevent_quit();
     let selected_fanction = match args.get(2).expect("Select faction").as_ref() {
         "thief" => Faction::Thief, // The non-streamed version of tcp.
@@ -116,7 +112,6 @@ async fn main() {
         server_id,
     };
 
-    let mut state: Option<InitStateResponse> = None;
     let (task, mut receiver) = net.listener.enqueue();
     let bytes = bincode::serialize(&ActionReq::Init(InitReq {
         name: name.clone(),
@@ -136,25 +131,26 @@ async fn main() {
         ..Default::default()
     };
     let inv_matrix = camera.matrix().inverse();
-    let mut card = CardView::new(CardState::Revealed(0, "xaxa".to_string()), &texture);
-    let mut card1 = CardView::new(CardState::Revealed(1, "xaxa".to_string()), &texture);
     let mut board = Board::new(vec![
         DropTarget {
             id: 0,
             anchor: vec3(0.0, 0.0, -2.0),
             size: vec2(10.0, 0.5),
             target_type: board::TargetType::Hand,
+            can_drop: false,
         },
         DropTarget {
             id: 1,
             anchor: vec3(0.0, 0.0, 1.5),
             size: vec2(10.0, 0.5),
             target_type: board::TargetType::Hand,
+            can_drop: true,
         },
     ]);
 
-    board.add_card_to_target(card, 1);
-   board.add_card_to_target(card1, 1);
+    let mut card_set = None;
+    //  board.add_card_to_target(card, 1);
+    // board.add_card_to_target(card1, 1);
     loop {
         if is_mouse_button_pressed(MouseButton::Left) {
             let msg = ActionReq::DrawCard;
@@ -164,21 +160,41 @@ async fn main() {
 
         clear_background(BLACK);
 
-        state = match receiver.try_receive() {
+        let mut response = match receiver.try_receive() {
             Some(event) => match event {
                 node::StoredNodeEvent::Network(net_event) => match net_event {
                     node::StoredNetEvent::Message(endpoint, data) => {
-                        let state = bincode::deserialize(&data).unwrap();
+                        let state: Response = bincode::deserialize(&data).unwrap();
                         dbg!("{:?}", &state);
                         Some(state)
                     }
-                    _ => state,
+                    _ => None,
                 },
-                node::StoredNodeEvent::Signal(_) => state,
+                node::StoredNodeEvent::Signal(_) => None,
             },
-            None => state,
+            None => None,
         };
 
+        let mut turn: Faction = Faction::Thief;
+        match response {
+            Some(response_data) => match response_data {
+                Response::Initial(init_state_response) => {
+                    turn = init_state_response.turn;
+                    card_set = Some(init_state_response.card_set);
+                    let mystate = init_state_response.my_state.unwrap();
+                    let common = mystate.get_common();
+                    for c in common.deck {
+                        let mut card = CardView::new(c, &texture);
+                    }
+                    for c in common.hand {
+                        let mut card = CardView::new(c, &texture);
+                        board.add_card_to_target(card, 1);
+                    }
+                }
+                Response::DrawCard => {}
+            },
+            None => {}
+        }
         // --- 3. DRAWING ---
         //draw_texture(&texture, 0.0, 0.0, WHITE);
 
@@ -194,14 +210,14 @@ async fn main() {
             10.0,
             screen_height() - 50.0,
             40.0,
-            get_color(selected_fanction, state.as_ref()),
+            get_color(selected_fanction, turn),
         );
         draw_text(
             &format!("{}", other_faction(selected_fanction)),
             10.0,
             50.0,
             40.0,
-            get_color(other_faction(selected_fanction), state.as_ref()),
+            get_color(other_faction(selected_fanction), turn),
         );
         if is_quit_requested() {
             net.handler.stop();

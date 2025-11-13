@@ -60,29 +60,23 @@ pub struct RemoteRes {
     pub wards: Vec<CardState>,
     pub contents: Option<CardState>,
 }
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct ThieStateResponse {
-    pub stats: BasicStats,
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct CommonState {
+    pub stats: BasicStats,
     pub deck: Vec<CardState>,
     pub hand: Vec<CardState>,
     pub discard: Vec<CardState>,
     pub score_area: Vec<CardState>,
-
+}
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ThiefState {
     pub spell_slots: Option<Vec<CardState>>,
     pub gear_slots: Option<Vec<CardState>>,
     pub ally_slots: Option<Vec<CardState>>,
 }
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct SanctumStateResponse {
-    // Core resource pools
-    pub stats: BasicStats,
-
-    pub deck: Vec<CardState>,
-    pub hand: Vec<CardState>,
-    pub discard: Vec<CardState>,
-    pub score_area: Vec<CardState>,
-
+pub struct SanctumState {
     pub hand_lair: Option<Vec<CardState>>,
     pub deck_lair: Option<Vec<CardState>>,
     pub discard_lair: Option<Vec<CardState>>,
@@ -90,15 +84,30 @@ pub struct SanctumStateResponse {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub enum Response{
-
+pub enum Response {
+    Initial(InitStateResponse),
+    DrawCard,
 }
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum PlayerStateResponse {
-    Thief(ThieStateResponse),
-    Sanctum(SanctumStateResponse),
+    Thief {
+        common: CommonState,
+        specific: ThiefState,
+    },
+    Sanctum {
+        common: CommonState,
+        specific: SanctumState,
+    },
 }
-#[derive(Serialize, Deserialize, Debug)]
+impl PlayerStateResponse {
+    pub fn get_common(self) -> CommonState {
+        match (self) {
+            PlayerStateResponse::Thief { common, .. }
+            | PlayerStateResponse::Sanctum { common, .. } => common,
+        }
+    }
+}
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct InitStateResponse {
     pub my_state: Option<PlayerStateResponse>,
     pub other_state: Option<PlayerStateResponse>,

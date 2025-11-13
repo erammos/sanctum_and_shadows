@@ -26,8 +26,7 @@ pub struct FocusInfo {
     selected_card: usize,
     previous_scale: f32,
 }
-pub struct Board<'texture>
-{
+pub struct Board<'texture> {
     pub targets: Vec<DropTarget>,
     cards: Vec<CardView<'texture>>,
     current_drag: Option<DragInfo>,
@@ -47,6 +46,7 @@ pub struct DropTarget {
     pub anchor: Vec3,
     pub size: Vec2,
     pub target_type: TargetType,
+    pub can_drop: bool,
 }
 impl DropTarget {
     pub fn draw(&self) {
@@ -104,34 +104,28 @@ impl<'texture> Board<'texture> {
         }
         None
     }
-    pub fn zoom_out_all_cards(&mut self)
-    {
-        for card in self.cards.iter_mut()
-        {
+    pub fn zoom_out_all_cards(&mut self) {
+        for card in self.cards.iter_mut() {
             self.current_focus = None;
             card.zoom_in(1.0)
         }
     }
     pub fn update(&mut self, mouse_world: Vec3) {
-        if(self.current_drag.is_none())
-        {
+        if (self.current_drag.is_none()) {
             let is_focus = self.current_focus.is_some();
-            if let Some((index, card))  = self.check_intersection(mouse_world) {
-                 if !is_focus
-                 {
-                     card.zoom_in(3.0);
-                     self.current_focus = Some(FocusInfo {
-                         selected_card: index,
-                         previous_scale: 1.0,
-                     })
-                 }
+            if let Some((index, card)) = self.check_intersection(mouse_world) {
+                if !is_focus {
+                    card.zoom_in(3.0);
+                    self.current_focus = Some(FocusInfo {
+                        selected_card: index,
+                        previous_scale: 1.0,
+                    })
+                }
             } else {
-
                 self.zoom_out_all_cards();
             }
         }
         if is_mouse_button_pressed(MouseButton::Left) && (self.current_drag.is_none()) {
-
             self.zoom_out_all_cards();
             if let Some((index, card)) = self.check_intersection(mouse_world) {
                 card.is_grabbed = true;
@@ -149,19 +143,17 @@ impl<'texture> Board<'texture> {
                     }
                 };
             }
-        }
-       else if is_mouse_button_down(MouseButton::Left) {
+        } else if is_mouse_button_down(MouseButton::Left) {
             if let Some(drag) = &self.current_drag {
                 let card = &mut self.cards[drag.selected_card as usize];
                 card.position = mouse_world - drag.drag_offset;
             }
-        }
-       else if is_mouse_button_released(MouseButton::Left) {
+        } else if is_mouse_button_released(MouseButton::Left) {
             if let Some(drag) = &self.current_drag {
                 let card = &mut self.cards[drag.selected_card as usize];
                 let mut selected_target: Option<usize> = drag.from_target_id;
                 for (i, target) in self.targets.iter().enumerate() {
-                    if card.intersects_area(&target) {
+                    if target.can_drop && card.intersects_area(&target) {
                         selected_target = Some(i);
                         break;
                     }
