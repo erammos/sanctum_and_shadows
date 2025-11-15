@@ -4,7 +4,7 @@
     "title": "Forbidden Grimoire",
     "faction": "Sanctum",
     "text": "When you Attune this, place 1 \"power\" counter on it. Spend counter to Activate a Ward for free.",
-    "image_file": "assets/cards/sanc-003.png",
+    "image_file": "client/assets/cards/sanc-003.png",
     "data": {
       "AncientArtifact": {
         "vp": 3,
@@ -17,7 +17,7 @@
     "title": "Glyph of Repellance",
     "faction": "Sanctum",
     "text": "↳ End the Infiltration.",
-    "image_file": "assets/cards/sanc-004.png",
+    "image_file": "client/assets/cards/sanc-004.png",
     "data": {
       "Ward": {
         "subtype": "Glyph",
@@ -31,7 +31,7 @@
     "title": "Cursed Idol",
     "faction": "Sanctum",
     "text": "If Thief accesses, you may pay X 💧 to deal 2X Magical Backlash (Max 5X).",
-    "image_file": "assets/cards/sanc-009.png",
+    "image_file": "client/assets/cards/sanc-009.png",
     "data": {
       "Asset": {
         "subtype": "Ambush",
@@ -44,7 +44,7 @@
     "title": "Grand Offering",
     "faction": "Sanctum",
     "text": "Gain 9 💧.",
-    "image_file": "assets/cards/sanc-010.png",
+    "image_file": "client/assets/cards/sanc-010.png",
     "data": {
       "Operation": {
         "subtype": "Ritual",
@@ -57,7 +57,7 @@
     "title": "Dispel Glyph",
     "faction": "Thief",
     "text": "1 💧: +1 Strength.\n1 💧: Break 1 Glyph subroutine.",
-    "image_file": "assets/cards/thief-001.png",
+    "image_file": "client/assets/cards/thief-001.png",
     "data": {
       "CounterSpell": {
         "subtype": "Fracter",
@@ -72,7 +72,7 @@
     "title": "Adventurer's Purse",
     "faction": "Thief",
     "text": "Gain 6 💧.",
-    "image_file": "assets/cards/thief-007.png",
+    "image_file": "client/assets/cards/thief-007.png",
     "data": {
       "Event": {
         "cost": 0
@@ -84,7 +84,7 @@
     "title": "Hasty Scrying",
     "faction": "Thief",
     "text": "Draw 3 cards.",
-    "image_file": "assets/cards/thief-008.png",
+    "image_file": "client/assets/cards/thief-008.png",
     "data": {
       "Event": {
         "cost": 1

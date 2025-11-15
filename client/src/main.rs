@@ -1,12 +1,18 @@
 mod board;
 mod card_view;
+use std::collections::HashMap;
+
+use common::CardId;
 use common::Response;
 use common::card::CardState;
 use common::card::Faction;
 use common::{ActionReq, InitReq, InitStateResponse};
 use macroquad::miniquad::{ElapsedQuery, window};
 use macroquad::prelude::*;
+use message_io::events::EventReceiver;
 use message_io::network::{Endpoint, NetEvent, SendStatus, Transport};
+use message_io::node::StoredNetEvent;
+use message_io::node::StoredNodeEvent;
 use message_io::node::{self, NodeHandler, NodeListener};
 
 use crate::board::Board;
@@ -87,10 +93,27 @@ fn window_conf() -> Conf {
         ..Default::default()
     }
 }
+
+pub fn receive(receiver: &mut EventReceiver<StoredNodeEvent<()>>) -> Option<Response> {
+    match receiver.try_receive() {
+        Some(event) => match event {
+            node::StoredNodeEvent::Network(net_event) => match net_event {
+                node::StoredNetEvent::Message(endpoint, data) => {
+                    let state: Response = bincode::deserialize(&data).unwrap();
+                    dbg!("{:?}", &state);
+                    Some(state)
+                }
+                _ => None,
+            },
+            node::StoredNodeEvent::Signal(_) => None,
+        },
+        None => None,
+    }
+}
+
 #[macroquad::main(window_conf)]
 async fn main() {
     let args: Vec<String> = std::env::args().collect();
-    let texture: Texture2D = load_texture("client/assets/sanc-003.png").await.unwrap();
 
     prevent_quit();
     let selected_fanction = match args.get(2).expect("Select faction").as_ref() {
@@ -123,6 +146,10 @@ async fn main() {
         status = net.handler.network().send(net.server_id, &bytes);
         next_frame().await;
     }
+    let mut response = None;
+    while let None = response {
+        response = receive(&mut receiver);
+    }
     let camera = Camera3D {
         position: vec3(0.0, 5.0, 0.0),
         up: vec3(0., 0., -1.0),
@@ -148,7 +175,31 @@ async fn main() {
         },
     ]);
 
+    let mut textures: HashMap<CardId, Texture2D> = HashMap::new();
     let mut card_set = None;
+    let mut turn: Faction = Faction::Thief;
+    match response {
+        Some(response_data) => match response_data {
+            Response::Initial(init_state_response) => {
+                turn = init_state_response.turn;
+                card_set = Some(init_state_response.card_set);
+                for (id, card) in card_set.unwrap().iter() {
+                    let texture = load_texture(&card.image_file).await.unwrap();
+                    textures.insert(id.to_string(), texture);
+                }
+                let mystate = init_state_response.my_state.unwrap();
+                let common = mystate.get_common();
+
+                for c in common.hand {
+                    let id = c.get_card_id().unwrap();
+                    let card = CardView::new(c, &textures[&id]);
+                    board.add_card_to_target(card, 1);
+                }
+            }
+            Response::DrawCard => {}
+        },
+        None => {}
+    }
     //  board.add_card_to_target(card, 1);
     // board.add_card_to_target(card1, 1);
     loop {
@@ -160,43 +211,7 @@ async fn main() {
 
         clear_background(BLACK);
 
-        let mut response = match receiver.try_receive() {
-            Some(event) => match event {
-                node::StoredNodeEvent::Network(net_event) => match net_event {
-                    node::StoredNetEvent::Message(endpoint, data) => {
-                        let state: Response = bincode::deserialize(&data).unwrap();
-                        dbg!("{:?}", &state);
-                        Some(state)
-                    }
-                    _ => None,
-                },
-                node::StoredNodeEvent::Signal(_) => None,
-            },
-            None => None,
-        };
-
-        let mut turn: Faction = Faction::Thief;
-        match response {
-            Some(response_data) => match response_data {
-                Response::Initial(init_state_response) => {
-                    turn = init_state_response.turn;
-                    card_set = Some(init_state_response.card_set);
-                    let mystate = init_state_response.my_state.unwrap();
-                    let common = mystate.get_common();
-                    for c in common.deck {
-                        let mut card = CardView::new(c, &texture);
-                    }
-                    for c in common.hand {
-                        let mut card = CardView::new(c, &texture);
-                        board.add_card_to_target(card, 1);
-                    }
-                }
-                Response::DrawCard => {}
-            },
-            None => {}
-        }
-        // --- 3. DRAWING ---
-        //draw_texture(&texture, 0.0, 0.0, WHITE);
+        let mut response = receive(&mut receiver);
 
         set_camera(&camera);
 

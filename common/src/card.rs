@@ -79,6 +79,20 @@ pub enum CardState {
     Revealed(InstanceId, CardId),
     Hidden(InstanceId),
 }
+impl CardState {
+    pub fn get_card_id(&self) -> Option<CardId> {
+        match self {
+            CardState::Revealed(instance_id, card_id) => Some(card_id.clone()),
+            CardState::Hidden(_) => None,
+        }
+    }
+    pub fn get_instance_id(&self) -> InstanceId {
+        match self {
+            CardState::Revealed(instance_id, _) => *instance_id,
+            CardState::Hidden(instance_id) => *instance_id,
+        }
+    }
+}
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct CardData {
     pub id: CardId,    // e.g., "sanc-004"
