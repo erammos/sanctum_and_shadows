@@ -10,7 +10,7 @@ pub struct CardView<'texture> {
     pub size: Vec2,
     pub zoom_in: f32,
     pub is_grabbed: bool,
-    pub attached_to_target: Option<usize>
+    pub attached_to_target: Option<usize>,
 }
 
 impl<'texture> CardView<'texture> {
@@ -22,7 +22,7 @@ impl<'texture> CardView<'texture> {
             card_state,
             texture,
             position: vec3(0.0, 0.0, 0.0),
-            size: vec2((10.0 / 16.0 ) * 0.25, 1.0 * 0.25),
+            size: vec2((10.0 / 16.0) * 0.25, 1.0 * 0.25),
             is_grabbed: false,
             zoom_in: 1.0,
             attached_to_target: None,
@@ -43,14 +43,22 @@ impl<'texture> CardView<'texture> {
         match self.card_state {
             CardState::Revealed(_, _) => {
                 draw_plane(self.position, self.size, Some(&self.texture), WHITE);
-                if self.zoom_in > 1.0
-                {
-                   let new_position = vec3( self.position.x, self.position.y + 1.0,self.position.z - 1.2);
-                    draw_plane(new_position, self.size * self.zoom_in, Some(&self.texture), WHITE);
+                if self.zoom_in > 1.0 {
+                    let new_position = vec3(
+                        self.position.x,
+                        self.position.y + 1.0,
+                        self.position.z - 1.2,
+                    );
+                    draw_plane(
+                        new_position,
+                        self.size * self.zoom_in,
+                        Some(&self.texture),
+                        WHITE,
+                    );
                 }
             }
             CardState::Hidden(_) => {
-                draw_plane(self.position, self.size * self.zoom_in, None, RED);
+                draw_plane(self.position, self.size, Some(&self.texture), WHITE);
             }
         }
     }

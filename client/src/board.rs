@@ -39,15 +39,24 @@ pub enum TargetType {
     BoardH,
     Trash,
     Hand,
+    Stack,
 }
 
+pub const MY_HAND: usize = 0;
+pub const MY_DECK: usize = 1;
+pub const MY_TRASH: usize = 2;
+pub const OTHER_HAND: usize = 3;
+pub const OTHER_DECK: usize = 4;
+pub const OTHER_TRASH: usize = 5;
+
 pub struct DropTarget {
-    pub id: u32,
+    pub id: usize,
     pub anchor: Vec3,
     pub size: Vec2,
     pub target_type: TargetType,
     pub can_drop: bool,
 }
+
 impl DropTarget {
     pub fn draw(&self) {
         draw_plane(self.anchor, self.size, None, PURPLE);
@@ -64,20 +73,19 @@ impl<'texture> Board<'texture> {
         }
     }
     pub fn update_layout(&mut self, target_id: usize) {
+        let target = &self.targets[target_id];
         let distance = self.cards[0].size.x * 2.0 + 0.02;
-
-        let target = &self.targets[target_id as usize];
+        let cards_per_target: Vec<_> = self
+            .cards
+            .iter_mut()
+            .filter(|c| c.attached_to_target == Some(target_id))
+            .collect();
         match target.target_type {
             TargetType::BoardH => {}
             TargetType::Hand => {
                 let mut next_pos = target.anchor;
-                let offset = ((self.cards.len() - 1) as f32 * distance) / 2.0;
-                for (i, card) in &mut self
-                    .cards
-                    .iter_mut()
-                    .filter(|c| c.attached_to_target == Some(target_id))
-                    .enumerate()
-                {
+                let offset = ((cards_per_target.len() - 1) as f32 * distance) / 2.0;
+                for card in cards_per_target {
                     card.position = vec3(next_pos.x - offset, next_pos.y, next_pos.z);
                     next_pos = vec3(next_pos.x + distance, next_pos.y, next_pos.z);
                 }
@@ -85,6 +93,14 @@ impl<'texture> Board<'texture> {
             TargetType::Event => {}
             TargetType::BoardV => {}
             TargetType::Trash => {}
+            TargetType::Stack => {
+                let mut next_pos = target.anchor;
+                let offset = 0.1;
+                for card in cards_per_target {
+                    card.position = vec3(next_pos.x, next_pos.y, next_pos.z);
+                    next_pos = vec3(next_pos.x, next_pos.y, next_pos.z + offset);
+                }
+            }
         };
     }
     pub fn add_card_to_target(&mut self, mut card: CardView<'texture>, target_id: usize) {

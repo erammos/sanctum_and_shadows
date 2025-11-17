@@ -100,7 +100,7 @@ pub enum PlayerStateResponse {
     },
 }
 impl PlayerStateResponse {
-    pub fn get_common(self) -> CommonState {
+    pub fn get_common(&self) -> &CommonState {
         match (self) {
             PlayerStateResponse::Thief { common, .. }
             | PlayerStateResponse::Sanctum { common, .. } => common,

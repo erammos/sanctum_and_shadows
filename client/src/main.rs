@@ -17,6 +17,12 @@ use message_io::node::{self, NodeHandler, NodeListener};
 
 use crate::board::Board;
 use crate::board::DropTarget;
+use crate::board::MY_DECK;
+use crate::board::MY_HAND;
+use crate::board::MY_TRASH;
+use crate::board::OTHER_DECK;
+use crate::board::OTHER_HAND;
+use crate::board::OTHER_TRASH;
 use crate::card_view::CardView; // <-- Using shared code!
 // Helper to store our networking items
 struct Net {
@@ -135,6 +141,7 @@ async fn main() {
         server_id,
     };
 
+    let back_texture = load_texture("client/assets/cards/back.png").await.unwrap();
     let (task, mut receiver) = net.listener.enqueue();
     let bytes = bincode::serialize(&ActionReq::Init(InitReq {
         name: name.clone(),
@@ -160,18 +167,25 @@ async fn main() {
     let inv_matrix = camera.matrix().inverse();
     let mut board = Board::new(vec![
         DropTarget {
-            id: 0,
-            anchor: vec3(0.0, 0.0, -2.0),
+            id: OTHER_HAND,
+            anchor: vec3(0.0, 0.0, 1.5),
             size: vec2(10.0, 0.5),
             target_type: board::TargetType::Hand,
             can_drop: false,
         },
         DropTarget {
-            id: 1,
-            anchor: vec3(0.0, 0.0, 1.5),
+            id: MY_HAND,
+            anchor: vec3(0.0, 0.0, -1.5),
             size: vec2(10.0, 0.5),
             target_type: board::TargetType::Hand,
             can_drop: true,
+        },
+        DropTarget {
+            id: MY_DECK,
+            anchor: vec3(-4.0, 0.0, -1.5),
+            size: vec2(1.0, 1.0),
+            target_type: board::TargetType::Stack,
+            can_drop: false,
         },
     ]);
 
@@ -188,12 +202,16 @@ async fn main() {
                     textures.insert(id.to_string(), texture);
                 }
                 let mystate = init_state_response.my_state.unwrap();
-                let common = mystate.get_common();
-
-                for c in common.hand {
+                let other_state = init_state_response.other_state.unwrap();
+                for c in mystate.get_common().hand.iter() {
                     let id = c.get_card_id().unwrap();
-                    let card = CardView::new(c, &textures[&id]);
-                    board.add_card_to_target(card, 1);
+                    board.add_card_to_target(CardView::new(c.clone(), &textures[&id]), MY_HAND);
+                }
+                for c in mystate.get_common().deck.iter() {
+                    board.add_card_to_target(CardView::new(c.clone(), &back_texture), MY_DECK);
+                }
+                for c in other_state.get_common().hand.iter() {
+                    board.add_card_to_target(CardView::new(c.clone(), &back_texture), OTHER_HAND);
                 }
             }
             Response::DrawCard => {}
