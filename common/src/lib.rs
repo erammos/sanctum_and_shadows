@@ -86,7 +86,8 @@ pub struct SanctumState {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum Response {
     Initial(InitStateResponse),
-    DrawCard,
+    DrawCard {
+        card:CardState},
 }
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum PlayerStateResponse {
@@ -121,6 +122,6 @@ pub struct InitReq {
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub enum ActionReq {
-    DrawCard,
+    DrawCard(InstanceId),
     Init(InitReq),
 }

@@ -104,7 +104,7 @@ fn create_sanctum_state_response(
                 stamina: 5,
                 score: 0,
             },
-            deck: instances.create_card_states(&deck, visible),
+            deck: instances.create_card_states(&deck, false),
             hand: instances.create_card_states(&hand, visible),
             discard: vec![],
             score_area: vec![],
@@ -130,7 +130,7 @@ fn create_thief_state_response(
                 stamina: 5,
                 score: 0,
             },
-            deck: instances.create_card_states(&deck, visible),
+            deck: instances.create_card_states(&deck, false),
             hand: instances.create_card_states(&hand, visible),
             discard: vec![],
             score_area: vec![],
@@ -178,11 +178,19 @@ fn main() {
             let message: ActionReq = bincode::deserialize(&input_data).unwrap();
 
             match message {
-                ActionReq::DrawCard => {
-                    //                   let output_data = bincode::serialize(&state).unwrap();
-                    //                  for client in clients.iter() {
-                    //                     node.network().send(*client.0, &output_data);
-                }
+                ActionReq::DrawCard(id) => {
+
+                    let visible =  instances.create_card_state(id,true);
+                                       let output_data = bincode::serialize(&Response::DrawCard { card:visible }).unwrap();
+                                      node.network().send(endpoint, &output_data);
+                     for client in clients.iter().filter(|&(e,_)| *e != endpoint)
+                     {
+                        let invisible =  instances.create_card_state(id,false);
+                         let output_data = bincode::serialize(&Response::DrawCard { card:invisible }).unwrap();
+                         node.network().send(*client.0, &output_data);
+                     }
+
+                },
                 ActionReq::Init(init_req) => {
                     let d = clients.get_mut(&endpoint).unwrap();
                     d.faction = Some(init_req.faction);

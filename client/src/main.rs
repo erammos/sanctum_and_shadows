@@ -116,6 +116,17 @@ pub fn receive(receiver: &mut EventReceiver<StoredNodeEvent<()>>) -> Option<Resp
         None => None,
     }
 }
+pub fn get_texture_from_card_state<'a>(c:&CardState, textures:&'a HashMap<CardId, Texture2D>) -> &'a Texture2D
+{
+    match  c{
+        CardState::Revealed(_, cardid) => {
+            &textures[cardid]
+        }
+        CardState::Hidden(_) => {
+            &textures["back"]
+        }
+    }
+}
 
 #[macroquad::main(window_conf)]
 async fn main() {
@@ -168,73 +179,82 @@ async fn main() {
     let mut board = Board::new(vec![
         DropTarget {
             id: OTHER_HAND,
-            anchor: vec3(0.0, 0.0, 1.5),
+            anchor: vec3(0.0, 0.0, -1.5),
             size: vec2(10.0, 0.5),
             target_type: board::TargetType::Hand,
+            can_drop: false,
+        },
+        DropTarget {
+            id: MY_DECK,
+            anchor: vec3(-2.0, 0.0, 1.5),
+            size: vec2(1.0, 1.0),
+            target_type: board::TargetType::Stack,
+            can_drop: false,
+        },
+        DropTarget {
+            id: OTHER_DECK,
+            anchor: vec3(2.0, 0.0, -1.5),
+            size: vec2(1.0, 1.0),
+            target_type: board::TargetType::Stack,
             can_drop: false,
         },
         DropTarget {
             id: MY_HAND,
-            anchor: vec3(0.0, 0.0, -1.5),
+            anchor: vec3(0.0, 0.0, 1.5),
             size: vec2(10.0, 0.5),
             target_type: board::TargetType::Hand,
             can_drop: true,
-        },
-        DropTarget {
-            id: MY_DECK,
-            anchor: vec3(-4.0, 0.0, -1.5),
-            size: vec2(1.0, 1.0),
-            target_type: board::TargetType::Stack,
-            can_drop: false,
         },
     ]);
 
     let mut textures: HashMap<CardId, Texture2D> = HashMap::new();
     let mut card_set = None;
     let mut turn: Faction = Faction::Thief;
-    match response {
-        Some(response_data) => match response_data {
-            Response::Initial(init_state_response) => {
-                turn = init_state_response.turn;
-                card_set = Some(init_state_response.card_set);
-                for (id, card) in card_set.unwrap().iter() {
-                    let texture = load_texture(&card.image_file).await.unwrap();
-                    textures.insert(id.to_string(), texture);
-                }
-                let mystate = init_state_response.my_state.unwrap();
-                let other_state = init_state_response.other_state.unwrap();
-                for c in mystate.get_common().hand.iter() {
-                    let id = c.get_card_id().unwrap();
-                    board.add_card_to_target(CardView::new(c.clone(), &textures[&id]), MY_HAND);
-                }
-                for c in mystate.get_common().deck.iter() {
-                    board.add_card_to_target(CardView::new(c.clone(), &back_texture), MY_DECK);
-                }
-                for c in other_state.get_common().hand.iter() {
-                    board.add_card_to_target(CardView::new(c.clone(), &back_texture), OTHER_HAND);
-                }
+    if let Some(response_data) = response { match response_data {
+        Response::Initial(init_state_response) => {
+            turn = init_state_response.turn;
+            card_set = Some(init_state_response.card_set);
+            for (id, card) in card_set.unwrap().iter() {
+                let texture = load_texture(&card.image_file).await.unwrap();
+                textures.insert(id.to_string(), texture);
             }
-            Response::DrawCard => {}
-        },
-        None => {}
-    }
+            textures.insert("back".to_string(),back_texture);
+            let mystate = init_state_response.my_state.unwrap();
+            let other_state = init_state_response.other_state.unwrap();
+            for c in mystate.get_common().hand.iter() {
+                board.add_card_to_target(CardView::new(c.clone(),get_texture_from_card_state(c,&textures)), MY_HAND);
+            }
+            for c in mystate.get_common().deck.iter() {
+                board.add_card_to_target(CardView::new(c.clone(), get_texture_from_card_state(c,&textures)), MY_DECK);
+            }
+            for c in other_state.get_common().hand.iter() {
+                board.add_card_to_target(CardView::new(c.clone(), get_texture_from_card_state(c,&textures)), OTHER_HAND);
+            }
+            for c in other_state.get_common().deck.iter() {
+                board.add_card_to_target(CardView::new(c.clone(), get_texture_from_card_state(c,&textures)), OTHER_DECK);
+            }
+        }
+        Response::DrawCard {  card: ref c } => {
+            board.draw_card(c, &textures);
+        }
+    } }
     //  board.add_card_to_target(card, 1);
     // board.add_card_to_target(card1, 1);
     loop {
-        if is_mouse_button_pressed(MouseButton::Left) {
-            let msg = ActionReq::DrawCard;
-            let bytes = bincode::serialize(&msg).unwrap();
-            net.handler.network().send(net.server_id, &bytes);
-        }
 
         clear_background(BLACK);
 
         let mut response = receive(&mut receiver);
-
+        if let Some(response_data) = response { match response_data {
+            Response::DrawCard { card: ref c } => {
+                board.draw_card(c, &textures);
+            }
+            _=> ()
+        } }
         set_camera(&camera);
 
         let mouse_world_pos = ndc_to_world(&inv_matrix, mouse_position_local());
-        board.update(mouse_world_pos);
+        board.update(mouse_world_pos, &net.handler, net.server_id);
         board.draw();
 
         set_default_camera();

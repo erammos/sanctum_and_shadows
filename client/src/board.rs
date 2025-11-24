@@ -1,7 +1,12 @@
-use common::InstanceId;
+use std::collections::HashMap;
+use common::{CardId, InstanceId, Response};
 use macroquad::prelude::*;
-
+use message_io::network::Endpoint;
+use message_io::node::NodeHandler;
+use common::ActionReq::DrawCard;
+use common::card::CardState;
 use crate::card_view::CardView;
+use crate::Net;
 
 struct Timer {
     current: f64,
@@ -33,6 +38,7 @@ pub struct Board<'texture> {
     current_focus: Option<FocusInfo>,
     focus_timer: Timer,
 }
+
 pub enum TargetType {
     Event,
     BoardV,
@@ -72,10 +78,26 @@ impl<'texture> Board<'texture> {
             focus_timer: Timer::now(),
         }
     }
+    pub fn draw_card(&mut self, card_state: &CardState, textures: &'texture std::collections::HashMap<std::string::String, macroquad::texture::Texture2D>) {
+
+        let card_view  = self.cards.iter_mut().find(|t| t.card_state.get_instance_id() == card_state.get_instance_id()).unwrap();
+        match card_state {
+            CardState::Revealed(instance_id, card_id) => {
+                card_view.card_state = card_state.clone();
+                card_view.texture = &textures[card_id];
+            }
+            CardState::Hidden(instance_id) => {
+                card_view.card_state = card_state.clone();
+                card_view.texture = &textures["back"];
+                card_view.attached_to_target = Some(OTHER_HAND);
+                self.update_layout(OTHER_HAND);
+            }
+        }
+    }
     pub fn update_layout(&mut self, target_id: usize) {
-        let target = &self.targets[target_id];
+        let target = &self.targets.iter().find(|t| t.id == target_id).unwrap();
         let distance = self.cards[0].size.x * 2.0 + 0.02;
-        let cards_per_target: Vec<_> = self
+        let mut cards_per_target: Vec<_> = self
             .cards
             .iter_mut()
             .filter(|c| c.attached_to_target == Some(target_id))
@@ -85,7 +107,7 @@ impl<'texture> Board<'texture> {
             TargetType::Hand => {
                 let mut next_pos = target.anchor;
                 let offset = ((cards_per_target.len() - 1) as f32 * distance) / 2.0;
-                for card in cards_per_target {
+                for card in cards_per_target.iter_mut().rev() {
                     card.position = vec3(next_pos.x - offset, next_pos.y, next_pos.z);
                     next_pos = vec3(next_pos.x + distance, next_pos.y, next_pos.z);
                 }
@@ -95,13 +117,15 @@ impl<'texture> Board<'texture> {
             TargetType::Trash => {}
             TargetType::Stack => {
                 let mut next_pos = target.anchor;
-                let offset = 0.1;
+                let offset = 0.02;
                 for card in cards_per_target {
                     card.position = vec3(next_pos.x, next_pos.y, next_pos.z);
-                    next_pos = vec3(next_pos.x, next_pos.y, next_pos.z + offset);
+                    next_pos = vec3(next_pos.x , next_pos.y + offset, next_pos.z);
                 }
             }
         };
+        self.cards.sort_by(|a,b| b.position.y.total_cmp(&a.position.y));
+
     }
     pub fn add_card_to_target(&mut self, mut card: CardView<'texture>, target_id: usize) {
         card.attached_to_target = Some(target_id);
@@ -126,8 +150,8 @@ impl<'texture> Board<'texture> {
             card.zoom_in(1.0)
         }
     }
-    pub fn update(&mut self, mouse_world: Vec3) {
-        if (self.current_drag.is_none()) {
+    pub fn update(&mut self, mouse_world: Vec3, handler: &NodeHandler<()>, endpoint: Endpoint) {
+        if self.current_drag.is_none() {
             let is_focus = self.current_focus.is_some();
             if let Some((index, card)) = self.check_intersection(mouse_world) {
                 if !is_focus {
@@ -155,7 +179,12 @@ impl<'texture> Board<'texture> {
                         });
                     }
                     common::card::CardState::Hidden(_) => {
-                        self.current_drag = None;
+                        self.current_drag = Some(DragInfo {
+                            selected_card: index,
+                            from_position: card.position,
+                            drag_offset: mouse_world - card.position,
+                            from_target_id: card.attached_to_target,
+                        });;
                     }
                 };
             }
@@ -168,13 +197,22 @@ impl<'texture> Board<'texture> {
             if let Some(drag) = &self.current_drag {
                 let card = &mut self.cards[drag.selected_card as usize];
                 let mut selected_target: Option<usize> = drag.from_target_id;
-                for (i, target) in self.targets.iter().enumerate() {
-                    if target.can_drop && card.intersects_area(&target) {
-                        selected_target = Some(i);
+                for (target) in &self.targets {
+                    if (target.can_drop || target.id == drag.from_target_id.unwrap()) && card.intersects_area(&target) {
+                        selected_target = Some(target.id);
                         break;
                     }
                 }
                 if let Some(target_id) = selected_target {
+                    #[allow(clippy::single_match)] match drag.from_target_id.unwrap()
+                    {
+                        MY_DECK=> if target_id == MY_HAND {
+                           let req =  DrawCard(card.card_state.get_instance_id());
+                            let output_data = bincode::serialize(&req).unwrap();
+                            handler.network().send(endpoint,&output_data);
+                       },
+                        _ => {}
+                    }
                     card.attached_to_target = Some(target_id);
                     self.update_layout(target_id);
                 }
